@@ -37,6 +37,7 @@ async def play(websocket):
     while True:
         try:
             request = await websocket.recv()
+            print('aca viene todo----------------')
             print(f"< {request}")
             request_data = json.loads(request)
             if request_data['event'] == 'update_user_list':
@@ -65,10 +66,11 @@ async def play(websocket):
 
 async def process_your_turn(websocket, request_data):
     turn_action = randint(0, 4)
-    if turn_action > 1:
+    if turn_action > 0:
+    # if turn_action > 1:
         await process_move(websocket, request_data)
-    elif turn_action == 0:
-        await process_kill_col(websocket, request_data)
+    # elif turn_action == 0:
+    #     await process_kill_col(websocket, request_data)
     else:
         await process_kill_row(websocket, request_data)
 
@@ -103,18 +105,39 @@ async def process_kill_row(websocket, request_data):
         },
     )
 
+def is_valid_move(board, column):
+    rows = len(board)
+    if column < 0 or column >= len(board[0]):
+        # La columna está fuera del rango del tablero
+        return False
+    for row in range(rows - 1, -1, -1):
+        if board[row][column] == ' ':
+            # La posición está vacía, el movimiento es válido
+            return True
+    # La columna está llena
+    return False
+
 async def process_move(websocket, request_data):
     side = request_data['data']['side']
     board = request_data['data']['board']
-    colums = board.find('|', 1) - 1
+    columns = board.find('|', 1) - 1
     print(board)
+    
+    # Inicializar la columna como inválida
+    column = None
+
+    # Elegir una columna aleatoria hasta encontrar una válida
+    while column is None or not is_valid_move(board, column):
+        column = randint(0, columns - 1)
+    
+    # Enviar el movimiento al servidor del juego
     await send(
         websocket,
         'move',
         {
             'game_id': request_data['data']['game_id'],
             'turn_token': request_data['data']['turn_token'],
-            'col': randint(0, colums),
+            'col': column,
         },
     )
 
